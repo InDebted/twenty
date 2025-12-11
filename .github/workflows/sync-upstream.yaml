@@ -1,0 +1,99 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/twentyhq/twenty.git || true
+
+      - name: Fetch upstream and push tags
+        run: |
+          git fetch upstream main --tags
+          git push origin --tags
+
+      - name: Check for changes
+        id: check
+        run: |
+          COMMITS_BEHIND=$(git rev-list --count HEAD..upstream/main)
+          echo "commits_behind=$COMMITS_BEHIND" >> $GITHUB_OUTPUT
+          echo "Commits behind upstream: $COMMITS_BEHIND"
+
+      - name: Create sync branch and merge
+        if: steps.check.outputs.commits_behind > 0
+        id: merge
+        run: |
+          BRANCH_NAME="sync-upstream-$(date +%Y%m%d-%H%M%S)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          git checkout -b $BRANCH_NAME
+
+          # Merge with preference for upstream on conflicts
+          git merge upstream/main -X theirs --no-edit
+
+          # Regenerate yarn.lock to apply our resolutions
+          yarn install
+
+          # Commit yarn.lock changes if any
+          if ! git diff --staged --quiet || ! git diff --quiet yarn.lock; then
+            git add yarn.lock
+            git commit -m "chore: regenerate yarn.lock with resolutions" || true
+          fi
+
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request
+        if: steps.check.outputs.commits_behind > 0
+        run: |
+          gh pr create \
+            --title "Sync with upstream twentyhq/twenty" \
+            --body "## Automated sync from upstream
+
+          **Commits behind:** ${{ steps.check.outputs.commits_behind }}
+
+          ### What this PR does
+          - Merges latest changes from \`twentyhq/twenty\` main branch
+          - Regenerates \`yarn.lock\` to apply our security resolutions
+
+          ### Review checklist
+          - [ ] Review upstream changes
+          - [ ] Verify CI passes
+          - [ ] Merge when ready
+
+          ---
+          *This PR was automatically created by the sync-upstream workflow.*" \
+            --base main \
+            --head ${{ steps.merge.outputs.branch_name }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
