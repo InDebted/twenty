@@ -18,7 +18,6 @@ export const fromRoleEntityToFlatRole = (role: RoleEntity): FlatRole => {
     canBeAssignedToUsers: role.canBeAssignedToUsers,
     canBeAssignedToAgents: role.canBeAssignedToAgents,
     canBeAssignedToApiKeys: role.canBeAssignedToApiKeys,
-    canBeAssignedToApplications: role.canBeAssignedToApplications,
     workspaceId: role.workspaceId,
     createdAt: role.createdAt.toISOString(),
     updatedAt: role.updatedAt.toISOString(),
@@ -28,5 +27,10 @@ export const fromRoleEntityToFlatRole = (role: RoleEntity): FlatRole => {
     objectPermissionIds: role.objectPermissions.map((op) => op.id),
     permissionFlagIds: role.permissionFlags.map((pf) => pf.id),
     fieldPermissionIds: role.fieldPermissions.map((fp) => fp.id),
+    rowLevelPermissionPredicateIds: role.rowLevelPermissionPredicates.map(
+      (rp) => rp.id,
+    ),
+    rowLevelPermissionPredicateGroupIds:
+      role.rowLevelPermissionPredicateGroups.map((rp) => rp.id),
   };
 };

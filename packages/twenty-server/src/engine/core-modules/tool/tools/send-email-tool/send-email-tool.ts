@@ -4,21 +4,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { render, toPlainText } from '@react-email/render';
 import DOMPurify from 'dompurify';
 import { reactMarkupFromJSON } from 'twenty-emails';
-import { isDefined, isValidUuid } from 'twenty-shared/utils';
+import {
+  extractFolderPathFilenameAndTypeOrThrow,
+  isDefined,
+  isValidUuid,
+} from 'twenty-shared/utils';
 import { In, type Repository } from 'typeorm';
 import { z } from 'zod';
 
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { FileService } from 'src/engine/core-modules/file/services/file.service';
-import { extractFolderPathAndFilename } from 'src/engine/core-modules/file/utils/extract-folderpath-and-filename.utils';
 import {
   SendEmailToolException,
   SendEmailToolExceptionCode,
 } from 'src/engine/core-modules/tool/tools/send-email-tool/exceptions/send-email-tool.exception';
-import { SendEmailToolParametersZodSchema } from 'src/engine/core-modules/tool/tools/send-email-tool/send-email-tool.schema';
+import { SendEmailInputZodSchema } from 'src/engine/core-modules/tool/tools/send-email-tool/send-email-tool.schema';
 import { type SendEmailInput } from 'src/engine/core-modules/tool/tools/send-email-tool/types/send-email-input.type';
 import { type ToolOutput } from 'src/engine/core-modules/tool/types/tool-output.type';
-import { type Tool } from 'src/engine/core-modules/tool/types/tool.type';
+import {
+  type Tool,
+  type ToolExecutionContext,
+} from 'src/engine/core-modules/tool/types/tool.type';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
@@ -33,7 +39,7 @@ export class SendEmailTool implements Tool {
 
   description =
     'Send an email using a connected account. Requires SEND_EMAIL_TOOL permission.';
-  inputSchema = SendEmailToolParametersZodSchema;
+  inputSchema = SendEmailInputZodSchema;
 
   constructor(
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
@@ -151,8 +157,8 @@ export class SendEmailTool implements Tool {
     for (const fileMetadata of files) {
       const fileEntity = fileEntityMap.get(fileMetadata.id)!;
 
-      const { folderPath, filename } = extractFolderPathAndFilename(
-        fileEntity.fullPath,
+      const { folderPath, filename } = extractFolderPathFilenameAndTypeOrThrow(
+        fileEntity.path,
       );
 
       const stream = await this.fileService.getFileStream(
@@ -175,8 +181,9 @@ export class SendEmailTool implements Tool {
 
   async execute(
     parameters: SendEmailInput,
-    workspaceId: string,
+    context: ToolExecutionContext,
   ): Promise<ToolOutput> {
+    const { workspaceId } = context;
     const { email, subject, body, files } = parameters;
     let { connectedAccountId } = parameters;
 

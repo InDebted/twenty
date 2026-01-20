@@ -9,7 +9,6 @@ import {
 
 import { type FileStorageService } from 'src/engine/core-modules/file-storage/file-storage.service';
 import { SERVERLESS_TMPDIR_FOLDER } from 'src/engine/core-modules/serverless/drivers/constants/serverless-tmpdir-folder';
-import { buildEnvVar } from 'src/engine/core-modules/serverless/drivers/utils/build-env-var';
 import { buildServerlessFunctionInMemory } from 'src/engine/core-modules/serverless/drivers/utils/build-serverless-function-in-memory';
 import { copyAndBuildDependencies } from 'src/engine/core-modules/serverless/drivers/utils/copy-and-build-dependencies';
 import { formatBuildError } from 'src/engine/core-modules/serverless/drivers/utils/format-build-error';
@@ -61,11 +60,17 @@ export class LocalDriver implements ServerlessDriver {
     await this.createLayerIfNotExists(serverlessFunction);
   }
 
-  async execute(
-    serverlessFunction: ServerlessFunctionEntity,
-    payload: object,
-    version: string,
-  ): Promise<ServerlessExecuteResult> {
+  async execute({
+    serverlessFunction,
+    payload,
+    version,
+    env,
+  }: {
+    serverlessFunction: ServerlessFunctionEntity;
+    payload: object;
+    version: string;
+    env?: Record<string, string>;
+  }): Promise<ServerlessExecuteResult> {
     await this.build(serverlessFunction);
 
     const startTime = Date.now();
@@ -154,7 +159,7 @@ export class LocalDriver implements ServerlessDriver {
         const { ok, result, error, stack, stdout, stderr } =
           await this.runChildWithEnv({
             runnerPath,
-            env: buildEnvVar(serverlessFunction),
+            env: env ?? {},
             payload,
             timeoutMs: 900_000, // timeout is handled by the serverless function service
           });
@@ -279,9 +284,13 @@ export class LocalDriver implements ServerlessDriver {
       stack?: string;
       stdout: string;
       stderr: string;
-    }>((resolve, _) => {
+    }>((resolve) => {
+      // Strip NODE_OPTIONS to prevent tsx loader from being inherited
+      const { NODE_OPTIONS: _n1, ...cleanProcessEnv } = process.env;
+      const { NODE_OPTIONS: _n2, ...cleanUserEnv } = env;
+
       const child = spawn(process.execPath, [runnerPath], {
-        env: { ...process.env, ...env },
+        env: { ...cleanProcessEnv, ...cleanUserEnv },
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 

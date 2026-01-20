@@ -1,5 +1,5 @@
 import { type ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
-import { GRAPH_DEFAULT_DATE_GRANULARITY } from '@/page-layout/widgets/graph/constants/GraphDefaultDateGranularity.constant';
+import { GRAPH_DEFAULT_DATE_GRANULARITY } from '@/page-layout/widgets/graph/constants/GraphDefaultDateGranularity';
 import { GRAPH_DEFAULT_ORDER_BY } from '@/page-layout/widgets/graph/constants/GraphDefaultOrderBy';
 import { getGroupByOrderBy } from '@/page-layout/widgets/graph/utils/getGroupByOrderBy';
 import { isRelationNestedFieldDateKind } from '@/page-layout/widgets/graph/utils/isRelationNestedFieldDateKind';
@@ -27,6 +27,7 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
   aggregateOperation,
   limit,
   firstDayOfTheWeek,
+  userTimeZone,
 }: {
   objectMetadataItem: ObjectMetadataItem;
   objectMetadataItems: ObjectMetadataItem[];
@@ -34,6 +35,7 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
   aggregateOperation?: string;
   limit?: number;
   firstDayOfTheWeek?: number;
+  userTimeZone?: string;
 }) => {
   const groupByFieldXId = chartConfiguration.primaryAxisGroupByFieldMetadataId;
 
@@ -82,6 +84,7 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
         : undefined,
       firstDayOfTheWeek,
       isNestedDateField: isFieldXNestedDate,
+      timeZone: userTimeZone,
     }),
   );
 
@@ -106,6 +109,7 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
           : undefined,
         firstDayOfTheWeek,
         isNestedDateField: isFieldYNestedDate,
+        timeZone: userTimeZone,
       }),
     );
   }
@@ -118,19 +122,21 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
     | ObjectRecordOrderByForRelationField
   > = [];
 
-  orderBy.push(
-    getGroupByOrderBy({
-      graphOrderBy:
-        chartConfiguration.primaryAxisOrderBy ?? GRAPH_DEFAULT_ORDER_BY,
-      groupByField: groupByFieldX,
-      groupBySubFieldName: chartConfiguration.primaryAxisGroupBySubFieldName,
-      aggregateOperation,
-      dateGranularity: shouldApplyDateGranularityX
-        ? (chartConfiguration.primaryAxisDateGranularity ??
-          GRAPH_DEFAULT_DATE_GRANULARITY)
-        : undefined,
-    }),
-  );
+  const primaryAxisOrderBy = getGroupByOrderBy({
+    graphOrderBy:
+      chartConfiguration.primaryAxisOrderBy ?? GRAPH_DEFAULT_ORDER_BY,
+    groupByField: groupByFieldX,
+    groupBySubFieldName: chartConfiguration.primaryAxisGroupBySubFieldName,
+    aggregateOperation,
+    dateGranularity: shouldApplyDateGranularityX
+      ? (chartConfiguration.primaryAxisDateGranularity ??
+        GRAPH_DEFAULT_DATE_GRANULARITY)
+      : undefined,
+  });
+
+  if (isDefined(primaryAxisOrderBy)) {
+    orderBy.push(primaryAxisOrderBy);
+  }
 
   if (isDefined(groupByFieldY)) {
     const isFieldYDateForOrderBy = isFieldMetadataDateKind(groupByFieldY.type);
@@ -144,20 +150,21 @@ export const generateGroupByQueryVariablesFromBarOrLineChartConfiguration = ({
     const shouldApplyDateGranularityYForOrderBy =
       isFieldYDateForOrderBy || isFieldYNestedDateForOrderBy;
 
-    orderBy.push(
-      getGroupByOrderBy({
-        graphOrderBy:
-          chartConfiguration.secondaryAxisOrderBy ?? GRAPH_DEFAULT_ORDER_BY,
-        groupByField: groupByFieldY,
-        groupBySubFieldName:
-          chartConfiguration.secondaryAxisGroupBySubFieldName,
-        aggregateOperation,
-        dateGranularity: shouldApplyDateGranularityYForOrderBy
-          ? (chartConfiguration.secondaryAxisGroupByDateGranularity ??
-            GRAPH_DEFAULT_DATE_GRANULARITY)
-          : undefined,
-      }),
-    );
+    const secondaryAxisOrderBy = getGroupByOrderBy({
+      graphOrderBy:
+        chartConfiguration.secondaryAxisOrderBy ?? GRAPH_DEFAULT_ORDER_BY,
+      groupByField: groupByFieldY,
+      groupBySubFieldName: chartConfiguration.secondaryAxisGroupBySubFieldName,
+      aggregateOperation,
+      dateGranularity: shouldApplyDateGranularityYForOrderBy
+        ? (chartConfiguration.secondaryAxisGroupByDateGranularity ??
+          GRAPH_DEFAULT_DATE_GRANULARITY)
+        : undefined,
+    });
+
+    if (isDefined(secondaryAxisOrderBy)) {
+      orderBy.push(secondaryAxisOrderBy);
+    }
   }
 
   return {
