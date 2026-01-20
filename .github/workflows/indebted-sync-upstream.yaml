@@ -126,6 +126,10 @@ jobs:
           fi
 
           # Regenerate yarn.lock from package.json (applies our resolutions)
+          echo "=== DEBUG: .yarnrc.yml contents ==="
+          cat .yarnrc.yml
+          echo "=== DEBUG: grep hardened ==="
+          grep -i hardened .yarnrc.yml || true
           rm -f yarn.lock
           yarn install
           git add yarn.lock
