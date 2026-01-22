@@ -203,7 +203,9 @@
     "prosemirror-view": "1.40.0",
     "prosemirror-transform": "1.10.4",
     "@lingui/core": "5.1.2",
-    "@types/qs": "6.9.16"
+    "@lingui/swc-plugin": "5.6.0",
+    "@types/qs": "6.9.16",
+    "@swc/core": "1.13.3"
   },
   "version": "0.2.1",
   "nx": {},
