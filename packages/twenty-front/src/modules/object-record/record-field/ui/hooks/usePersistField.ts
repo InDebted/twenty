@@ -31,6 +31,8 @@ import { getRecordFromRecordNode } from '@/object-record/cache/utils/getRecordFr
 import { useUpdateOneRecord } from '@/object-record/hooks/useUpdateOneRecord';
 import { isFieldArray } from '@/object-record/record-field/ui/types/guards/isFieldArray';
 import { isFieldArrayValue } from '@/object-record/record-field/ui/types/guards/isFieldArrayValue';
+import { isFieldFiles } from '@/object-record/record-field/ui/types/guards/isFieldFiles';
+import { isFieldFilesValue } from '@/object-record/record-field/ui/types/guards/isFieldFilesValue';
 import { isFieldMorphRelationManyToOne } from '@/object-record/record-field/ui/types/guards/isFieldMorphRelationManyToOne';
 import { isFieldRelationManyToOne } from '@/object-record/record-field/ui/types/guards/isFieldRelationManyToOne';
 import { isFieldRelationManyToOneValue } from '@/object-record/record-field/ui/types/guards/isFieldRelationManyToOneValue';
@@ -41,18 +43,18 @@ import { isFieldRichTextV2Value } from '@/object-record/record-field/ui/types/gu
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
 import { getForeignKeyNameFromRelationFieldName } from '@/object-record/utils/getForeignKeyNameFromRelationFieldName';
 import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
-import { isFieldBoolean } from '../types/guards/isFieldBoolean';
-import { isFieldBooleanValue } from '../types/guards/isFieldBooleanValue';
-import { isFieldCurrency } from '../types/guards/isFieldCurrency';
-import { isFieldCurrencyValue } from '../types/guards/isFieldCurrencyValue';
-import { isFieldDateTime } from '../types/guards/isFieldDateTime';
-import { isFieldDateTimeValue } from '../types/guards/isFieldDateTimeValue';
-import { isFieldNumber } from '../types/guards/isFieldNumber';
-import { isFieldNumberValue } from '../types/guards/isFieldNumberValue';
-import { isFieldRating } from '../types/guards/isFieldRating';
-import { isFieldRatingValue } from '../types/guards/isFieldRatingValue';
-import { isFieldText } from '../types/guards/isFieldText';
-import { isFieldTextValue } from '../types/guards/isFieldTextValue';
+import { isFieldBoolean } from '@/object-record/record-field/ui/types/guards/isFieldBoolean';
+import { isFieldBooleanValue } from '@/object-record/record-field/ui/types/guards/isFieldBooleanValue';
+import { isFieldCurrency } from '@/object-record/record-field/ui/types/guards/isFieldCurrency';
+import { isFieldCurrencyValue } from '@/object-record/record-field/ui/types/guards/isFieldCurrencyValue';
+import { isFieldDateTime } from '@/object-record/record-field/ui/types/guards/isFieldDateTime';
+import { isFieldDateTimeValue } from '@/object-record/record-field/ui/types/guards/isFieldDateTimeValue';
+import { isFieldNumber } from '@/object-record/record-field/ui/types/guards/isFieldNumber';
+import { isFieldNumberValue } from '@/object-record/record-field/ui/types/guards/isFieldNumberValue';
+import { isFieldRating } from '@/object-record/record-field/ui/types/guards/isFieldRating';
+import { isFieldRatingValue } from '@/object-record/record-field/ui/types/guards/isFieldRatingValue';
+import { isFieldText } from '@/object-record/record-field/ui/types/guards/isFieldText';
+import { isFieldTextValue } from '@/object-record/record-field/ui/types/guards/isFieldTextValue';
 
 export const usePersistField = ({
   objectMetadataItemId,
@@ -153,6 +155,9 @@ export const usePersistField = ({
         const fieldIsArray =
           isFieldArray(fieldDefinition) && isFieldArrayValue(valueToPersist);
 
+        const fieldIsFiles =
+          isFieldFiles(fieldDefinition) && isFieldFilesValue(valueToPersist);
+
         const fieldIsUIReadOnly =
           fieldDefinition.metadata.isUIReadOnly ?? false;
 
@@ -179,6 +184,7 @@ export const usePersistField = ({
           fieldIsAddress ||
           fieldIsRawJson ||
           fieldIsArray ||
+          fieldIsFiles ||
           fieldIsRichText ||
           fieldIsRichTextV2;
 
@@ -202,11 +208,16 @@ export const usePersistField = ({
               },
             });
 
-            upsertRecordsInStore([
-              getRecordFromRecordNode({
-                recordNode: newRecord,
-              }),
-            ]);
+            upsertRecordsInStore({
+              partialRecords: [
+                getRecordFromRecordNode({
+                  recordNode: newRecord,
+                }),
+              ],
+              recordGqlFields: {
+                [getForeignKeyNameFromRelationFieldName(fieldName)]: true,
+              },
+            });
             return;
           }
 
@@ -223,11 +234,13 @@ export const usePersistField = ({
               },
             });
 
-            upsertRecordsInStore([
-              getRecordFromRecordNode({
-                recordNode: newRecord,
-              }),
-            ]);
+            upsertRecordsInStore({
+              partialRecords: [
+                getRecordFromRecordNode({
+                  recordNode: newRecord,
+                }),
+              ],
+            });
             return;
           }
 

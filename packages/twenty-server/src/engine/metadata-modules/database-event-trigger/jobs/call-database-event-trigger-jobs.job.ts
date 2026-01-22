@@ -1,19 +1,24 @@
 import { InjectRepository } from '@nestjs/typeorm';
 
+import chunk from 'lodash.chunk';
 import { Repository } from 'typeorm';
 
-import type { ObjectRecordEvent } from 'src/engine/core-modules/event-emitter/types/object-record-event.event';
+import type { ObjectRecordEvent } from 'twenty-shared/database-events';
+
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
 import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { DatabaseEventTriggerEntity } from 'src/engine/metadata-modules/database-event-trigger/entities/database-event-trigger.entity';
+import { transformEventBatchToEventPayloads } from 'src/engine/metadata-modules/database-event-trigger/utils/transform-event-batch-to-event-payloads';
 import {
   ServerlessFunctionTriggerJob,
   ServerlessFunctionTriggerJobData,
 } from 'src/engine/metadata-modules/serverless-function/jobs/serverless-function-trigger.job';
 import { WorkspaceEventBatch } from 'src/engine/workspace-event-emitter/types/workspace-event-batch.type';
+
+const DATABASE_EVENT_JOBS_CHUNK_SIZE = 20;
 
 @Processor(MessageQueue.triggerQueue)
 export class CallDatabaseEventTriggerJobsJob {
@@ -35,29 +40,34 @@ export class CallDatabaseEventTriggerJobsJob {
         relations: ['serverlessFunction'],
       });
 
-    for (const databaseEventListener of databaseEventListeners) {
-      if (
-        !this.shouldTriggerJob({
+    const databaseEventListenersToTrigger = databaseEventListeners.filter(
+      (databaseEventListener) =>
+        this.shouldTriggerJob({
           workspaceEventBatch,
           eventName: databaseEventListener.settings.eventName,
-        })
-      ) {
-        continue;
-      }
+        }),
+    );
 
-      const { events, ...batchEventInfo } = workspaceEventBatch;
+    const serverlessFunctionPayloads = transformEventBatchToEventPayloads({
+      databaseEventListeners: databaseEventListenersToTrigger,
+      workspaceEventBatch,
+    });
 
-      for (const event of events) {
-        await this.messageQueueService.add<ServerlessFunctionTriggerJobData>(
-          ServerlessFunctionTriggerJob.name,
-          {
-            serverlessFunctionId: databaseEventListener.serverlessFunction.id,
-            workspaceId: databaseEventListener.workspaceId,
-            payload: { ...batchEventInfo, ...event },
-          },
-          { retryLimit: 3 },
-        );
-      }
+    if (serverlessFunctionPayloads.length === 0) {
+      return;
+    }
+
+    const serverlessFunctionPayloadsChunks = chunk(
+      serverlessFunctionPayloads,
+      DATABASE_EVENT_JOBS_CHUNK_SIZE,
+    );
+
+    for (const serverlessFunctionPayloadsChunk of serverlessFunctionPayloadsChunks) {
+      await this.messageQueueService.add<ServerlessFunctionTriggerJobData[]>(
+        ServerlessFunctionTriggerJob.name,
+        serverlessFunctionPayloadsChunk,
+        { retryLimit: 3 },
+      );
     }
   }
 

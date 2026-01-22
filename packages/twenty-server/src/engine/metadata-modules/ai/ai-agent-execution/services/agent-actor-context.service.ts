@@ -15,10 +15,12 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 export type AgentActorContext = {
   actorContext: ActorMetadata;
   roleId: string;
+  userId: string;
+  userWorkspaceId: string;
 };
 
 @Injectable()
-// eslint-disable-next-line @nx/workspace-inject-workspace-repository
+// eslint-disable-next-line twenty/inject-workspace-repository
 export class AgentActorContextService {
   constructor(
     private readonly userWorkspaceService: UserWorkspaceService,
@@ -88,6 +90,8 @@ export class AgentActorContextService {
     return {
       actorContext,
       roleId,
+      userId: userWorkspace.userId,
+      userWorkspaceId,
     };
   }
 }

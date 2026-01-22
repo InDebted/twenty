@@ -1,0 +1,149 @@
+---
+title: Widgety
+description: Prozkoumejte typy widgetů a možnosti vizualizace v Twenty.
+---
+
+import { ChartIcon } from '/snippets/chart-icon.mdx';
+
+## Dostupné widgety
+
+Twenty nabízí různé typy widgetů pro vizualizaci vašich CRM dat.
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="chart-bar-popular" />Bar Charts</span>
+
+Zobrazují data jako vodorovné nebo svislé sloupce.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-bar-chart.png" alt="Bar chart" />
+</Frame>
+
+**Vhodné pro:**
+
+* Porovnávání hodnot napříč kategoriemi
+* Zobrazování pořadí
+* Sledování metrik podle časového období
+
+**Příklady použití:**
+
+* Obchody podle fáze
+* Tržby podle obchodního zástupce
+* Počet kontaktů přidaných za měsíc
+
+<Note>
+  **Display limits**: Bar charts can show a maximum of 100 bars, and 50 groups per bar when using Group By. Pokud uvidíte upozornění "Nezobrazená data: max X sloupců na graf", přidejte filtry, abyste zúžili svá data, nebo změňte seskupení (např. seskupujte podle týdnů místo dnů).
+</Note>
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="chart-pie" />Pie Charts</span>
+
+Zobrazují podíly z celku.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-pie-chart.png" alt="Pie chart" />
+</Frame>
+
+**Vhodné pro:**
+
+* Zobrazování složení nebo rozložení
+* Porovnávání částí s celkem
+* Zvýraznění hlavních segmentů
+
+**Příklady použití:**
+
+* Rozložení obchodů podle zdroje
+* Rozdělení kontaktů podle odvětví
+* Složení pipeline podle vlastníka
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="chart-line" />Line Charts</span>
+
+Zobrazují trendy v čase.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-line-chart.png" alt="Line chart" />
+</Frame>
+
+**Vhodné pro:**
+
+* Sledování změn v čase
+* Identifikace trendů
+* Porovnávání více metrik
+
+**Příklady použití:**
+
+* Trend měsíčního počtu obchodů
+* Růst tržeb mezi čtvrtletími
+* Úroveň aktivity v čase
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="sum" />Aggregate Charts</span>
+
+Výrazně zobrazují jednotlivé klíčové hodnoty.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-aggregate-chart.png" alt="Aggregate chart" />
+</Frame>
+
+**Vhodné pro:**
+
+* Zvýraznění KPI
+* Zobrazení součtů nebo průměrů
+* Rychlé kontroly stavu
+
+**Příklady použití:**
+
+* Celková hodnota pipeline
+* Počet otevřených příležitostí
+* Míra konverze
+
+**Pokročilé možnosti:**
+
+* **Poměr**: U polí typu Select lze vypočítat poměry mezi hodnotami. Přejděte do **Zobrazovaná data** → vyberte své pole → povolte možnost **Poměr**.
+* **Prefix a sufix**: Přidejte vlastní text před nebo za číslo (např. prefix "$" nebo sufix "%") pro lepší čitelnost.
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="frame" />iFrames</span>
+
+Vkládejte externí nástroje a obsah přímo do svého řídicího panelu.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-iframe.png" alt="iFrame" />
+</Frame>
+
+**Vhodné pro:**
+
+* Zobrazení externích reportů nebo řídicích panelů
+* Integrace prodejních nástrojů třetích stran
+* Zobrazení živého obsahu z jiných systémů
+
+**Příklady použití:**
+
+* Metriky z vašeho nástroje podpory
+* Metriky z vašeho dialeru
+* Živý obsah z vašeho nástroje pro prodejní sekvence
+
+### <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><ChartIcon icon="align-box-left-top" />Rich Text</span>
+
+Add formatted text and content directly to your dashboard.
+
+<Frame>
+  <img src="/images/user-guide/dashboard/dashboard-widget-rich-text.png" alt="Rich text" />
+</Frame>
+
+**Vhodné pro:**
+
+* Adding context or instructions
+* Dashboard descriptions
+* Notes and annotations
+
+**Features:**
+
+* Rich text formatting (bold, italic, lists, etc.)
+* Image and file uploads
+* Markdown-style editing
+
+<Note>
+  **Již brzy**: Měřicí grafy (gauge) a tabulky zatím nejsou k dispozici, ale máme je v plánu.
+</Note>
+
+### Duplikování widgetů
+
+1. Klikněte na widget
+2. Otevřete **Možnosti**
+3. Klikněte na **Duplikovat widget**

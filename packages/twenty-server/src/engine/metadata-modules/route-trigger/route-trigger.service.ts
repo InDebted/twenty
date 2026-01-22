@@ -14,6 +14,7 @@ import {
   RouteTriggerExceptionCode,
 } from 'src/engine/metadata-modules/route-trigger/exceptions/route-trigger.exception';
 import { RouteTriggerEntity } from 'src/engine/metadata-modules/route-trigger/route-trigger.entity';
+import { buildServerlessFunctionEvent } from 'src/engine/metadata-modules/route-trigger/utils/build-serverless-function-event.util';
 import { ServerlessFunctionService } from 'src/engine/metadata-modules/serverless-function/serverless-function.service';
 
 @Injectable()
@@ -88,22 +89,24 @@ export class RouteTriggerService {
     request: Request;
     workspaceId: string;
   }) {
-    const { workspace } =
+    const authContext =
       await this.accessTokenService.validateTokenByRequest(request);
 
-    if (!isDefined(workspace)) {
+    if (!isDefined(authContext.workspace)) {
       throw new RouteTriggerException(
         'Workspace not found',
         RouteTriggerExceptionCode.WORKSPACE_NOT_FOUND,
       );
     }
 
-    if (workspace.id !== workspaceId) {
+    if (authContext.workspace.id !== workspaceId) {
       throw new RouteTriggerException(
         'You are not authorized',
         RouteTriggerExceptionCode.FORBIDDEN_EXCEPTION,
       );
     }
+
+    return authContext;
   }
 
   async handle({
@@ -126,23 +129,20 @@ export class RouteTriggerService {
       });
     }
 
-    const queryParams = request.query;
-
-    const bodyParams = request.body;
-
-    const executionParams = {
-      ...queryParams,
-      ...bodyParams,
-      ...routeTriggerWithPathParams.pathParams,
-    };
+    const event = buildServerlessFunctionEvent({
+      request,
+      pathParameters: routeTriggerWithPathParams.pathParams,
+      forwardedRequestHeaders:
+        routeTriggerWithPathParams.routeTrigger.forwardedRequestHeaders ?? [],
+    });
 
     const result =
-      await this.serverlessFunctionService.executeOneServerlessFunction(
-        routeTriggerWithPathParams.routeTrigger.serverlessFunction.id,
-        routeTriggerWithPathParams.routeTrigger.workspaceId,
-        executionParams,
-        'draft',
-      );
+      await this.serverlessFunctionService.executeOneServerlessFunction({
+        id: routeTriggerWithPathParams.routeTrigger.serverlessFunction.id,
+        workspaceId: routeTriggerWithPathParams.routeTrigger.workspaceId,
+        payload: event,
+        version: 'draft',
+      });
 
     if (!isDefined(result)) {
       return result;

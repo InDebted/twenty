@@ -5,17 +5,19 @@ import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadata
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useGetRecordFromCache } from '@/object-record/cache/hooks/useGetRecordFromCache';
 import { getObjectTypename } from '@/object-record/cache/utils/getObjectTypename';
+import { getRecordFromRecordNode } from '@/object-record/cache/utils/getRecordFromRecordNode';
 import { getRecordNodeFromRecord } from '@/object-record/cache/utils/getRecordNodeFromRecord';
 import { updateRecordFromCache } from '@/object-record/cache/utils/updateRecordFromCache';
 import { useGenerateDepthRecordGqlFieldsFromObject } from '@/object-record/graphql/record-gql-fields/hooks/useGenerateDepthRecordGqlFieldsFromObject';
 import { generateDepthRecordGqlFieldsFromRecord } from '@/object-record/graphql/record-gql-fields/utils/generateDepthRecordGqlFieldsFromRecord';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { useRefetchAggregateQueries } from '@/object-record/hooks/useRefetchAggregateQueries';
-import { useRegisterObjectOperation } from '@/object-record/hooks/useRegisterObjectOperation';
 import { useUpdateOneRecordMutation } from '@/object-record/hooks/useUpdateOneRecordMutation';
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { computeOptimisticRecordFromInput } from '@/object-record/utils/computeOptimisticRecordFromInput';
+import { dispatchObjectRecordOperationBrowserEvent } from '@/object-record/utils/dispatchObjectRecordOperationBrowserEvent';
+import { getUpdatedFieldsFromRecordInput } from '@/object-record/utils/getUpdatedFieldsFromRecordInput';
 import { getUpdateOneRecordMutationResponseField } from '@/object-record/utils/getUpdateOneRecordMutationResponseField';
 import { sanitizeRecordInput } from '@/object-record/utils/sanitizeRecordInput';
 import { isNull } from '@sniptt/guards';
@@ -38,7 +40,6 @@ export const useUpdateOneRecord = <
   objectNameSingular,
   recordGqlFields,
 }: useUpdateOneRecordProps) => {
-  const { registerObjectOperation } = useRegisterObjectOperation();
   const { upsertRecordsInStore } = useUpsertRecordsInStore();
   const apolloCoreClient = useApolloCoreClient();
 
@@ -165,6 +166,11 @@ export const useUpdateOneRecord = <
           const record = data?.[mutationResponseField];
           if (!isDefined(record)) return;
 
+          const recordToUpsert = getRecordFromRecordNode({
+            recordNode: record,
+          });
+          upsertRecordsInStore({ partialRecords: [recordToUpsert] });
+
           triggerUpdateRecordOptimisticEffect({
             cache,
             objectMetadataItem,
@@ -230,9 +236,18 @@ export const useUpdateOneRecord = <
 
     const udpatedRecord = updatedRecord?.data?.[mutationResponseField] ?? null;
 
-    registerObjectOperation(objectMetadataItem, {
-      type: 'update-one',
-      result: { updateInput: updateOneRecordInput },
+    dispatchObjectRecordOperationBrowserEvent({
+      objectMetadataItem,
+      operation: {
+        type: 'update-one',
+        result: {
+          updateInput: {
+            recordId: idToUpdate,
+            updatedFields:
+              getUpdatedFieldsFromRecordInput(updateOneRecordInput),
+          },
+        },
+      },
     });
 
     return udpatedRecord;
