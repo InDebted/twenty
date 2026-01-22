@@ -2,6 +2,8 @@ import * as fs from 'fs-extra';
 import { join } from 'path';
 import { v4 } from 'uuid';
 
+const APP_FOLDER = 'src/app';
+
 export const copyBaseApplicationProject = async ({
   appName,
   appDisplayName,
@@ -21,10 +23,23 @@ export const copyBaseApplicationProject = async ({
 
   await createYarnLock(appDirectory);
 
+  const appFolderPath = join(appDirectory, APP_FOLDER);
+
+  await fs.ensureDir(appFolderPath);
+
+  await createDefaultServerlessFunctionRoleConfig({
+    displayName: appDisplayName,
+    appDirectory: appFolderPath,
+  });
+
+  await createDefaultFrontComponent({
+    appDirectory: appFolderPath,
+  });
+
   await createApplicationConfig({
     displayName: appDisplayName,
     description: appDescription,
-    appDirectory,
+    appDirectory: appFolderPath,
   });
 };
 
@@ -76,6 +91,66 @@ yarn-error.log*
   await fs.writeFile(join(appDirectory, '.gitignore'), gitignoreContent);
 };
 
+const createDefaultServerlessFunctionRoleConfig = async ({
+  displayName,
+  appDirectory,
+}: {
+  displayName: string;
+  appDirectory: string;
+}) => {
+  const universalIdentifier = v4();
+
+  const content = `import { defineRole } from 'twenty-sdk';
+
+export const DEFAULT_FUNCTION_ROLE_UNIVERSAL_IDENTIFIER =
+  '${universalIdentifier}';
+
+export default defineRole({
+  universalIdentifier: DEFAULT_FUNCTION_ROLE_UNIVERSAL_IDENTIFIER,
+  label: '${displayName} default function role',
+  description: '${displayName} default function role',
+  canReadAllObjectRecords: true,
+  canUpdateAllObjectRecords: true,
+  canSoftDeleteAllObjectRecords: true,
+  canDestroyAllObjectRecords: false,
+});
+`;
+
+  await fs.writeFile(join(appDirectory, 'default-function.role.ts'), content);
+};
+
+const createDefaultFrontComponent = async ({
+  appDirectory,
+}: {
+  appDirectory: string;
+}) => {
+  const universalIdentifier = v4();
+
+  const content = `import { defineFrontComponent } from 'twenty-sdk';
+
+export const HelloWorld = () => {
+  return (
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>Hello, World!</h1>
+      <p>This is your first front component.</p>
+    </div>
+  );
+};
+
+export default defineFrontComponent({
+  universalIdentifier: '${universalIdentifier}',
+  name: 'hello-world',
+  description: 'A sample front component',
+  component: HelloWorld,
+});
+`;
+
+  await fs.writeFile(
+    join(appDirectory, 'hello-world.front-component.tsx'),
+    content,
+  );
+};
+
 const createApplicationConfig = async ({
   displayName,
   description,
@@ -85,15 +160,15 @@ const createApplicationConfig = async ({
   description?: string;
   appDirectory: string;
 }) => {
-  const content = `import { type ApplicationConfig } from 'twenty-sdk';
+  const content = `import { defineApp } from 'twenty-sdk';
+import { DEFAULT_FUNCTION_ROLE_UNIVERSAL_IDENTIFIER } from './default-function.role';
 
-const config: ApplicationConfig = {
+export default defineApp({
   universalIdentifier: '${v4()}',
   displayName: '${displayName}',
   description: '${description ?? ''}',
-};
-
-export default config;
+  functionRoleUniversalIdentifier: DEFAULT_FUNCTION_ROLE_UNIVERSAL_IDENTIFIER,
+});
 `;
 
   await fs.writeFile(join(appDirectory, 'application.config.ts'), content);
@@ -117,21 +192,32 @@ const createPackageJson = async ({
     },
     packageManager: 'yarn@4.9.2',
     scripts: {
-      'create-entity': 'twenty app add',
-      dev: 'twenty app dev',
-      generate: 'twenty app generate',
-      sync: 'twenty app sync',
-      logs: 'twenty app logs',
-      uninstall: 'twenty app uninstall',
+      'auth:login': 'twenty auth:login',
+      'auth:logout': 'twenty auth:logout',
+      'auth:status': 'twenty auth:status',
+      'auth:switch': 'twenty auth:switch',
+      'auth:list': 'twenty auth:list',
+      'app:dev': 'twenty app:dev',
+      'app:sync': 'twenty app:sync',
+      'entity:add': 'twenty entity:add',
+      'app:generate': 'twenty app:generate',
+      'function:logs': 'twenty function:logs',
+      'function:execute': 'twenty function:execute',
+      'app:uninstall': 'twenty app:uninstall',
       help: 'twenty help',
-      auth: 'twenty auth login',
+      lint: 'eslint',
+      'lint:fix': 'eslint --fix',
     },
     dependencies: {
-      'twenty-sdk': '0.2.0',
+      'twenty-sdk': '0.3.1',
     },
     devDependencies: {
-      '@types/node': '^24.7.2',
       typescript: '^5.9.3',
+      '@types/node': '^24.7.2',
+      '@types/react': '^19.0.2',
+      react: '^19.0.2',
+      eslint: '^9.32.0',
+      'typescript-eslint': '^8.50.0',
     },
   };
 
