@@ -10,12 +10,14 @@ import {
   validateSync,
 } from 'class-validator';
 import { isDefined } from 'twenty-shared/utils';
+import { type LoggerOptions } from 'typeorm/logger/LoggerOptions';
 
-import { AwsRegion } from 'src/engine/core-modules/twenty-config/interfaces/aws-region.interface';
+import { type AwsRegion } from 'src/engine/core-modules/twenty-config/interfaces/aws-region.interface';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 import { SupportDriver } from 'src/engine/core-modules/twenty-config/interfaces/support.interface';
 
 import { CaptchaDriverType } from 'src/engine/core-modules/captcha/interfaces';
+import { CodeInterpreterDriverType } from 'src/engine/core-modules/code-interpreter/code-interpreter.interface';
 import { EmailDriver } from 'src/engine/core-modules/email/enums/email-driver.enum';
 import { ExceptionHandlerDriver } from 'src/engine/core-modules/exception-handler/interfaces';
 import { StorageDriverType } from 'src/engine/core-modules/file-storage/interfaces';
@@ -23,6 +25,7 @@ import { LoggerDriverType } from 'src/engine/core-modules/logger/interfaces';
 import { type MeterDriver } from 'src/engine/core-modules/metrics/types/meter-driver.type';
 import { ServerlessDriverType } from 'src/engine/core-modules/serverless/serverless.interface';
 import { CastToLogLevelArray } from 'src/engine/core-modules/twenty-config/decorators/cast-to-log-level-array.decorator';
+import { CastToTypeORMLogLevelArray } from 'src/engine/core-modules/twenty-config/decorators/cast-to-typeorm-log-level-array.decorator';
 import { CastToMeterDriverArray } from 'src/engine/core-modules/twenty-config/decorators/cast-to-meter-driver.decorator';
 import { CastToPositiveNumber } from 'src/engine/core-modules/twenty-config/decorators/cast-to-positive-number.decorator';
 import { CastToUpperSnakeCase } from 'src/engine/core-modules/twenty-config/decorators/cast-to-upper-snake-case.decorator';
@@ -156,7 +159,7 @@ export class ConfigVariables {
     description: 'Enable or disable the IMAP messaging integration',
     type: ConfigVariableType.BOOLEAN,
   })
-  IS_IMAP_SMTP_CALDAV_ENABLED = false;
+  IS_IMAP_SMTP_CALDAV_ENABLED = true;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.MICROSOFT_AUTH,
@@ -374,7 +377,7 @@ export class ConfigVariables {
     type: ConfigVariableType.BOOLEAN,
   })
   @IsOptional()
-  IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS = false;
+  IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS = true;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
@@ -526,6 +529,39 @@ export class ConfigVariables {
   SERVERLESS_LAMBDA_SECRET_ACCESS_KEY: string;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
+    description:
+      'Code interpreter driver type - LOCAL for development (unsafe), E2B for sandboxed execution',
+    type: ConfigVariableType.STRING,
+    options: Object.values(CodeInterpreterDriverType),
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @CastToUpperSnakeCase()
+  CODE_INTERPRETER_TYPE: CodeInterpreterDriverType =
+    CodeInterpreterDriverType.DISABLED;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
+    description: 'E2B API key for sandboxed code execution',
+    type: ConfigVariableType.STRING,
+    isSensitive: true,
+  })
+  @ValidateIf(
+    (env) => env.CODE_INTERPRETER_TYPE === CodeInterpreterDriverType.E_2_B,
+  )
+  E2B_API_KEY?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
+    description: 'Timeout in milliseconds for code execution (default: 300000)',
+    type: ConfigVariableType.NUMBER,
+  })
+  @IsOptional()
+  @CastToPositiveNumber()
+  CODE_INTERPRETER_TIMEOUT_MS = 300_000;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ANALYTICS_CONFIG,
     description: 'Enable or disable analytics for telemetry',
     type: ConfigVariableType.BOOLEAN,
@@ -554,6 +590,17 @@ export class ConfigVariables {
   })
   @IsOptional()
   TELEMETRY_ENABLED = true;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGGING,
+    description:
+      'TypeORM logging options for development mode. Accepts comma-separated values: query, schema, error, warn, info, log, migration',
+    type: ConfigVariableType.ARRAY,
+    options: ['query', 'schema', 'error', 'warn', 'info', 'log', 'migration'],
+  })
+  @CastToTypeORMLogLevelArray()
+  @IsOptional()
+  TYPEORM_LOGGING: LoggerOptions = ['error'];
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
@@ -799,6 +846,22 @@ export class ConfigVariables {
     require_host: false,
   })
   PG_DATABASE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    isSensitive: true,
+    description: 'Database connection URL',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsUrl({
+    protocols: ['postgres', 'postgresql'],
+    require_tld: false,
+    allow_underscores: true,
+    require_host: false,
+  })
+  PG_DATABASE_REPLICA_URL: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -1111,20 +1174,21 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
     description:
-      'Default AI model ID for speed-optimized operations (lightweight tasks, high throughput)',
+      'Comma-separated list of AI model IDs for speed-optimized operations, in priority order. The first available model will be used.',
     type: ConfigVariableType.STRING,
   })
   @IsOptional()
-  DEFAULT_AI_SPEED_MODEL_ID = 'gpt-4o-mini';
+  DEFAULT_AI_SPEED_MODEL_ID =
+    'gpt-4.1-mini,claude-haiku-4-5-20251001,grok-3-mini';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
     description:
-      'Default AI model ID for performance-optimized operations (complex reasoning, quality focus)',
+      'Comma-separated list of AI model IDs for performance-optimized operations, in priority order. The first available model will be used.',
     type: ConfigVariableType.STRING,
   })
   @IsOptional()
-  DEFAULT_AI_PERFORMANCE_MODEL_ID = 'gpt-4o';
+  DEFAULT_AI_PERFORMANCE_MODEL_ID = 'gpt-4.1,claude-sonnet-4-5-20250929,grok-4';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
@@ -1414,6 +1478,26 @@ export class ConfigVariables {
   })
   @IsOptional()
   AWS_SES_ACCOUNT_ID: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description: 'Timeout in milliseconds for primary database queries',
+    type: ConfigVariableType.NUMBER,
+    isEnvOnly: true,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  PG_DATABASE_PRIMARY_TIMEOUT_MS: number = 10000;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description: 'Timeout in milliseconds for replica database queries',
+    type: ConfigVariableType.NUMBER,
+    isEnvOnly: true,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  PG_DATABASE_REPLICA_TIMEOUT_MS: number = 10000;
 }
 
 export const validate = (config: Record<string, unknown>): ConfigVariables => {

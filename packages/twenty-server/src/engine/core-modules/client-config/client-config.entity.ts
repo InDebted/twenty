@@ -47,6 +47,9 @@ export class ClientAIModelConfig {
 
   @Field(() => NativeModelCapabilities, { nullable: true })
   nativeCapabilities?: NativeModelCapabilities;
+
+  @Field(() => Boolean, { nullable: true })
+  deprecated?: boolean;
 }
 
 @ObjectType()
@@ -194,4 +197,7 @@ export class ClientConfig {
 
   @Field(() => String, { nullable: true })
   calendarBookingPageId?: string;
+
+  @Field(() => Boolean)
+  isCloudflareIntegrationEnabled: boolean;
 }

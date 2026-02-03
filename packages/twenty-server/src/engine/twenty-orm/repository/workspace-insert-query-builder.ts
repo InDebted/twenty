@@ -12,6 +12,7 @@ import { type WorkspaceInternalContext } from 'src/engine/twenty-orm/interfaces/
 
 import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
 import { type AuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
+import { FeatureFlagKey } from 'src/engine/core-modules/feature-flag/enums/feature-flag-key.enum';
 import { type QueryDeepPartialEntityWithNestedRelationFields } from 'src/engine/twenty-orm/entity-manager/types/query-deep-partial-entity-with-nested-relation-fields.type';
 import { type RelationConnectQueryConfig } from 'src/engine/twenty-orm/entity-manager/types/relation-connect-query-config.type';
 import { type RelationDisconnectQueryFieldsByEntityIndex } from 'src/engine/twenty-orm/entity-manager/types/relation-nested-query-fields-by-entity-index.type';
@@ -31,6 +32,7 @@ import { formatData } from 'src/engine/twenty-orm/utils/format-data.util';
 import { formatResult } from 'src/engine/twenty-orm/utils/format-result.util';
 import { formatTwentyOrmEventToDatabaseBatchEvent } from 'src/engine/twenty-orm/utils/format-twenty-orm-event-to-database-batch-event.util';
 import { getObjectMetadataFromEntityTarget } from 'src/engine/twenty-orm/utils/get-object-metadata-from-entity-target.util';
+import { validateRLSPredicatesForRecords } from 'src/engine/twenty-orm/utils/validate-rls-predicates-for-records.util';
 
 export class WorkspaceInsertQueryBuilder<
   T extends ObjectLiteral,
@@ -115,6 +117,40 @@ export class WorkspaceInsertQueryBuilder<
         shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
       });
 
+      // Fix overwrites for composite fields - valuesSet contains formatted/flattened column names
+      // but overwrites was computed before formatData, missing composite field columns
+      if (
+        isDefined(this.expressionMap.onUpdate?.overwrite) &&
+        isDefined(this.expressionMap.valuesSet)
+      ) {
+        const valuesArray = Array.isArray(this.expressionMap.valuesSet)
+          ? this.expressionMap.valuesSet
+          : [this.expressionMap.valuesSet];
+
+        const allValueKeys = new Set(
+          valuesArray.flatMap((value) => Object.keys(value)),
+        );
+
+        const mainAliasMetadata = this.expressionMap.mainAlias?.metadata;
+
+        if (mainAliasMetadata) {
+          const missingColumns = mainAliasMetadata.columns
+            .filter(
+              (col) =>
+                allValueKeys.has(col.databaseName) &&
+                !this.expressionMap.onUpdate.overwrite!.includes(
+                  col.databaseName,
+                ),
+            )
+            .map((col) => col.databaseName);
+
+          this.expressionMap.onUpdate.overwrite = [
+            ...this.expressionMap.onUpdate.overwrite,
+            ...missingColumns,
+          ];
+        }
+      }
+
       const mainAliasTarget = this.getMainAliasTarget();
 
       const objectMetadata = getObjectMetadataFromEntityTarget(
@@ -143,6 +179,8 @@ export class WorkspaceInsertQueryBuilder<
 
         this.expressionMap.valuesSet = updatedValues;
       }
+
+      this.validateRLSPredicatesForInsert();
 
       const result = await super.execute();
       const eventSelectQueryBuilder = (
@@ -226,8 +264,48 @@ export class WorkspaceInsertQueryBuilder<
         this.internalContext,
       );
 
-      throw computeTwentyORMException(error, objectMetadata);
+      throw await computeTwentyORMException(
+        error,
+        objectMetadata,
+        this.connection.manager as WorkspaceEntityManager,
+        this.internalContext,
+      );
     }
+  }
+
+  private validateRLSPredicatesForInsert(): void {
+    if (
+      this.featureFlagMap[
+        FeatureFlagKey.IS_ROW_LEVEL_PERMISSION_PREDICATES_ENABLED
+      ] !== true
+    ) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    const valuesToInsert = Array.isArray(this.expressionMap.valuesSet)
+      ? this.expressionMap.valuesSet
+      : [this.expressionMap.valuesSet];
+
+    const valuesToInsertFormatted = formatResult<T[]>(
+      valuesToInsert,
+      objectMetadata,
+      this.internalContext.flatObjectMetadataMaps,
+      this.internalContext.flatFieldMetadataMaps,
+    );
+
+    validateRLSPredicatesForRecords({
+      records: valuesToInsertFormatted,
+      objectMetadata,
+      internalContext: this.internalContext,
+      authContext: this.authContext,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+    });
   }
 
   private getMainAliasTarget(): EntityTarget<T> {
