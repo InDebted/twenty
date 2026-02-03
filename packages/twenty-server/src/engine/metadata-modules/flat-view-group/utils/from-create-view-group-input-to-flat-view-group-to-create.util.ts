@@ -8,12 +8,10 @@ export const fromCreateViewGroupInputToFlatViewGroupToCreate = ({
   createViewGroupInput: rawCreateViewGroupInput,
   workspaceId,
   workspaceCustomApplicationId,
-  mainGroupByFieldMetadataId,
 }: {
   createViewGroupInput: CreateViewGroupInput;
   workspaceId: string;
   workspaceCustomApplicationId: string;
-  mainGroupByFieldMetadataId: string;
 }): FlatViewGroup => {
   const { viewId, ...createViewGroupInput } =
     trimAndRemoveDuplicatedWhitespacesFromObjectStringProperties(
@@ -26,14 +24,12 @@ export const fromCreateViewGroupInputToFlatViewGroupToCreate = ({
 
   return {
     id: viewGroupId,
-    fieldMetadataId: mainGroupByFieldMetadataId, // Mandatory because non-nullable until we completely remove it
     viewId,
     workspaceId,
     createdAt: createdAt,
     updatedAt: createdAt,
     deletedAt: null,
-    universalIdentifier:
-      createViewGroupInput.universalIdentifier ?? viewGroupId,
+    universalIdentifier: createViewGroupInput.universalIdentifier ?? v4(),
     isVisible: createViewGroupInput.isVisible ?? true,
     fieldValue: createViewGroupInput.fieldValue,
     position: createViewGroupInput.position ?? 0,

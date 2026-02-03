@@ -1,5 +1,5 @@
 import { type FlatPageLayoutTab } from 'src/engine/metadata-modules/flat-page-layout-tab/types/flat-page-layout-tab.type';
-import { type PageLayoutTabEntity } from 'src/engine/metadata-modules/page-layout/entities/page-layout-tab.entity';
+import { type PageLayoutTabEntity } from 'src/engine/metadata-modules/page-layout-tab/entities/page-layout-tab.entity';
 
 export const transformPageLayoutTabEntityToFlatPageLayoutTab = (
   pageLayoutTabEntity: PageLayoutTabEntity,
@@ -13,8 +13,7 @@ export const transformPageLayoutTabEntityToFlatPageLayoutTab = (
     position: pageLayoutTabEntity.position,
     pageLayoutId: pageLayoutTabEntity.pageLayoutId,
     workspaceId: pageLayoutTabEntity.workspaceId,
-    universalIdentifier:
-      pageLayoutTabEntity.universalIdentifier ?? pageLayoutTabEntity.id,
+    universalIdentifier: pageLayoutTabEntity.universalIdentifier,
     applicationId: pageLayoutTabEntity.applicationId,
     widgetIds: pageLayoutTabEntity.widgets.map((widget) => widget.id),
   };

@@ -1,3 +1,4 @@
+import { WidgetSettingsFooter } from '@/command-menu/pages/page-layout/components/WidgetSettingsFooter';
 import { usePageLayoutIdFromContextStoreTargetedRecord } from '@/command-menu/pages/page-layout/hooks/usePageLayoutFromContextStoreTargetedRecord';
 import { useWidgetInEditMode } from '@/command-menu/pages/page-layout/hooks/useWidgetInEditMode';
 import { FormTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormTextFieldInput';
@@ -7,9 +8,17 @@ import { t } from '@lingui/core/macro';
 import { isNonEmptyString, isString } from '@sniptt/guards';
 import { useState } from 'react';
 import { isDefined, isValidUrl } from 'twenty-shared/utils';
+import { WidgetConfigurationType } from '~/generated/graphql';
+
+const StyledOuterContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
 
 const StyledContainer = styled.div`
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing(3)};
   padding: ${({ theme }) => theme.spacing(2)};
@@ -22,11 +31,7 @@ export const CommandMenuPageLayoutIframeSettings = () => {
 
   const { updatePageLayoutWidget } = useUpdatePageLayoutWidget(pageLayoutId);
 
-  if (!isDefined(widgetInEditMode)) {
-    throw new Error('Widget ID must be present while editing the widget');
-  }
-
-  const widgetConfiguration = widgetInEditMode.configuration;
+  const widgetConfiguration = widgetInEditMode?.configuration;
 
   const configUrl =
     widgetConfiguration && 'url' in widgetConfiguration
@@ -37,6 +42,10 @@ export const CommandMenuPageLayoutIframeSettings = () => {
     isString(configUrl) ? configUrl : null,
   );
   const [urlError, setUrlError] = useState('');
+
+  if (!isDefined(widgetInEditMode)) {
+    return null;
+  }
 
   const validateUrl = (urlString: string): boolean => {
     const trimmedUrl = urlString.trim();
@@ -67,22 +76,24 @@ export const CommandMenuPageLayoutIframeSettings = () => {
     updatePageLayoutWidget(widgetInEditMode.id, {
       configuration: {
         __typename: 'IframeConfiguration',
+        configurationType: WidgetConfigurationType.IFRAME,
         url: isNonEmptyString(trimmedValue) ? trimmedValue : null,
       },
     });
   };
 
   return (
-    <>
+    <StyledOuterContainer>
       <StyledContainer>
         <FormTextFieldInput
           label={t`URL to Embed`}
-          placeholder="https://example.com/embed"
+          placeholder={t`https://example.com/embed`}
           defaultValue={url}
           onChange={handleUrlChange}
           error={urlError}
         />
       </StyledContainer>
-    </>
+      <WidgetSettingsFooter />
+    </StyledOuterContainer>
   );
 };

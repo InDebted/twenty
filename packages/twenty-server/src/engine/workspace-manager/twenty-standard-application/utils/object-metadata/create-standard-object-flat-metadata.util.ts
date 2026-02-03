@@ -5,7 +5,6 @@ import { type StandardBuilderArgs } from 'src/engine/workspace-manager/twenty-st
 
 export type CreateStandardObjectContext<O extends AllStandardObjectName> = {
   universalIdentifier: string;
-  standardId: string;
   nameSingular: O;
   namePlural: string;
   labelSingular: string;
@@ -17,7 +16,9 @@ export type CreateStandardObjectContext<O extends AllStandardObjectName> = {
   isAuditLogged?: boolean;
   isUIReadOnly?: boolean;
   shortcut?: string | null;
+  duplicateCriteria?: string[][] | null;
   labelIdentifierFieldMetadataName: AllStandardObjectFieldName<O>;
+  imageIdentifierFieldMetadataName?: AllStandardObjectFieldName<O>;
 };
 
 export type CreateStandardObjectArgs<
@@ -32,7 +33,6 @@ export const createStandardObjectFlatMetadata = <
 >({
   context: {
     universalIdentifier,
-    standardId,
     nameSingular,
     namePlural,
     labelSingular,
@@ -44,7 +44,9 @@ export const createStandardObjectFlatMetadata = <
     isAuditLogged = true,
     isUIReadOnly = false,
     shortcut = null,
+    duplicateCriteria = null,
     labelIdentifierFieldMetadataName,
+    imageIdentifierFieldMetadataName,
   },
   workspaceId,
   standardObjectMetadataRelatedEntityIds,
@@ -52,7 +54,7 @@ export const createStandardObjectFlatMetadata = <
   now,
 }: CreateStandardObjectArgs<O>): FlatObjectMetadata => ({
   universalIdentifier,
-  standardId,
+  standardId: universalIdentifier,
   applicationId: twentyStandardApplicationId,
   workspaceId,
   nameSingular,
@@ -70,13 +72,17 @@ export const createStandardObjectFlatMetadata = <
   isUIReadOnly,
   isLabelSyncedWithName: false,
   standardOverrides: null,
-  duplicateCriteria: null,
+  duplicateCriteria,
   shortcut,
   labelIdentifierFieldMetadataId:
     standardObjectMetadataRelatedEntityIds[nameSingular].fields[
       labelIdentifierFieldMetadataName
     ].id,
-  imageIdentifierFieldMetadataId: null,
+  imageIdentifierFieldMetadataId: imageIdentifierFieldMetadataName
+    ? standardObjectMetadataRelatedEntityIds[nameSingular].fields[
+        imageIdentifierFieldMetadataName
+      ].id
+    : null,
   targetTableName: 'DEPRECATED',
   fieldMetadataIds: [],
   indexMetadataIds: [],

@@ -8,7 +8,6 @@ import { In, MoreThanOrEqual } from 'typeorm';
 import { InjectCacheStorage } from 'src/engine/core-modules/cache-storage/decorators/cache-storage.decorator';
 import { CacheStorageService } from 'src/engine/core-modules/cache-storage/services/cache-storage.service';
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
-import { type WorkspaceEntityManager } from 'src/engine/twenty-orm/entity-manager/workspace-entity-manager';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { MessageChannelSyncStatusService } from 'src/modules/messaging/common/services/message-channel-sync-status.service';
@@ -17,12 +16,8 @@ import {
   MessageChannelPendingGroupEmailsAction,
   MessageChannelSyncStage,
   MessageChannelWorkspaceEntity,
-  MessageFolderImportPolicy,
 } from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
-import {
-  MessageFolderPendingSyncAction,
-  MessageFolderWorkspaceEntity,
-} from 'src/modules/messaging/common/standard-objects/message-folder.workspace-entity';
+import { MessageFolderPendingSyncAction } from 'src/modules/messaging/common/standard-objects/message-folder.workspace-entity';
 import { MessagingMessageCleanerService } from 'src/modules/messaging/message-cleaner/services/messaging-message-cleaner.service';
 import { SyncMessageFoldersService } from 'src/modules/messaging/message-folder-manager/services/sync-message-folders.service';
 import { MessagingAccountAuthenticationService } from 'src/modules/messaging/message-import-manager/services/messaging-account-authentication.service';
@@ -127,35 +122,16 @@ export class MessagingMessageListFetchService {
             },
           };
 
-          const datasource =
-            await this.globalWorkspaceOrmManager.getDataSourceForWorkspace(
+          const messageFolders =
+            await this.syncMessageFoldersService.syncMessageFolders({
+              messageChannel: messageChannelWithFreshTokens,
               workspaceId,
-            );
+            });
 
-          await this.syncMessageFoldersService.syncMessageFolders({
-            workspaceId,
-            messageChannel: messageChannelWithFreshTokens,
-            manager: datasource.manager as WorkspaceEntityManager,
-          });
-
-          const messageFolderRepository =
-            await this.globalWorkspaceOrmManager.getRepository<MessageFolderWorkspaceEntity>(
-              workspaceId,
-              'messageFolder',
-            );
-
-          const messageFolders = await messageFolderRepository.find({
-            where: {
-              messageChannelId: freshMessageChannel.id,
-              pendingSyncAction: MessageFolderPendingSyncAction.NONE,
-            },
-          });
-
-          const messageFoldersToSync =
-            messageChannelWithFreshTokens.messageFolderImportPolicy ===
-            MessageFolderImportPolicy.ALL_FOLDERS
-              ? messageFolders
-              : messageFolders.filter((folder) => folder.isSynced);
+          const messageFoldersToSync = messageFolders.filter(
+            (folder) =>
+              folder.pendingSyncAction === MessageFolderPendingSyncAction.NONE,
+          );
 
           const messageLists =
             await this.messagingGetMessageListService.getMessageLists(
@@ -362,18 +338,11 @@ export class MessagingMessageListFetchService {
     messageChannel: MessageChannelWorkspaceEntity,
     workspaceId: string,
   ): Promise<boolean> {
-    const messageFolderRepository =
-      await this.globalWorkspaceOrmManager.getRepository<MessageFolderWorkspaceEntity>(
-        workspaceId,
-        'messageFolder',
-      );
-
-    const foldersWithPendingActions = await messageFolderRepository.find({
-      where: {
-        messageChannelId: messageChannel.id,
-        pendingSyncAction: MessageFolderPendingSyncAction.FOLDER_DELETION,
-      },
-    });
+    const foldersWithPendingActions = messageChannel.messageFolders.filter(
+      (folder) =>
+        isDefined(folder.pendingSyncAction) &&
+        folder.pendingSyncAction !== MessageFolderPendingSyncAction.NONE,
+    );
 
     if (foldersWithPendingActions.length === 0) {
       return false;
