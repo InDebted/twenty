@@ -113,16 +113,42 @@ jobs:
             CONFLICTED_FILES=$(git diff --name-only --diff-filter=U)
             echo "Conflicted files: $CONFLICTED_FILES"
 
-            # Only yarn.lock conflicts can be auto-resolved
-            if [ "$CONFLICTED_FILES" != "yarn.lock" ]; then
+            # Check if all conflicts can be auto-resolved
+            # We can auto-resolve: yarn.lock, CI workflow files
+            CAN_AUTO_RESOLVE=true
+            for file in $CONFLICTED_FILES; do
+              case "$file" in
+                yarn.lock|.github/workflows/ci-*.yaml)
+                  echo "Can auto-resolve: $file"
+                  ;;
+                *)
+                  echo "Cannot auto-resolve: $file"
+                  CAN_AUTO_RESOLVE=false
+                  ;;
+              esac
+            done
+
+            if [ "$CAN_AUTO_RESOLVE" = "false" ]; then
               echo "::error::Merge conflicts require manual resolution: $CONFLICTED_FILES"
               exit 1
             fi
 
-            # Take upstream's yarn.lock to resolve conflict
-            echo "Auto-resolving yarn.lock conflict by taking upstream's version..."
-            git checkout --theirs yarn.lock
-            git add yarn.lock
+            # Auto-resolve each conflicted file
+            for file in $CONFLICTED_FILES; do
+              echo "Auto-resolving conflict: $file"
+              git checkout --theirs "$file"
+
+              # For CI workflow files, replace Depot runners with standard GitHub runners
+              if [[ "$file" == .github/workflows/ci-*.yaml ]]; then
+                echo "Replacing Depot runners with standard runners in $file"
+                sed -i 's/depot-ubuntu-24.04-8/ubuntu-24.04/g' "$file"
+                # Also update cache key names that reference the runner
+                sed -i 's/depot-ubuntu-24.04-8-runner/ubuntu-24.04-runner/g' "$file"
+              fi
+
+              git add "$file"
+            done
+
             git commit --no-edit
           fi
 
