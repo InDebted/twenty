@@ -138,12 +138,15 @@ jobs:
               echo "Auto-resolving conflict: $file"
               git checkout --theirs "$file"
 
-              # For CI workflow files, replace Depot runners with standard GitHub runners
+              # For CI workflow files, replace paid runners with standard GitHub runners
               if [[ "$file" == .github/workflows/ci-*.yaml ]]; then
-                echo "Replacing Depot runners with standard runners in $file"
+                echo "Replacing paid runners with standard runners in $file"
+                # Replace Depot runners
                 sed -i 's/depot-ubuntu-24.04-8/ubuntu-24.04/g' "$file"
-                # Also update cache key names that reference the runner
                 sed -i 's/depot-ubuntu-24.04-8-runner/ubuntu-24.04-runner/g' "$file"
+                # Replace GitHub larger runners (8-core)
+                sed -i 's/ubuntu-latest-8-cores/ubuntu-24.04/g' "$file"
+                sed -i 's/ubuntu-latest-8-cores-runner/ubuntu-24.04-runner/g' "$file"
               fi
 
               git add "$file"
