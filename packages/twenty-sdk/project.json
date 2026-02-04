@@ -4,7 +4,8 @@
   "sourceRoot": "packages/twenty-sdk/src",
   "projectType": "library",
   "tags": [
-    "scope:sdk"
+    "scope:sdk",
+    "scope:shared"
   ],
   "targets": {
     "build": {
@@ -13,7 +14,11 @@
         "^build"
       ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{projectRoot}/dist",
+        "{projectRoot}/front-component/package.json",
+        "{projectRoot}/front-component/dist",
+        "{projectRoot}/front-component-constants/package.json",
+        "{projectRoot}/front-component-constants/dist"
       ]
     },
     "dev": {
@@ -97,7 +102,7 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "packages/twenty-sdk",
-        "command": "npx vitest run --config vitest.integration.config.ts"
+        "command": "npx wait-on http://localhost:3000/healthz --timeout 600000 --interval 1000 --log && npx vitest run --config vitest.integration.config.ts"
       }
     },
     "test:e2e": {
