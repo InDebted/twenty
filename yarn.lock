@@ -31778,7 +31778,7 @@ __metadata:
     lodash.kebabcase: "npm:^4.1.1"
     lodash.startcase: "npm:^4.4.0"
     uuid: "npm:^13.0.0"
-    vite: "npm:^7.0.0"
+    vite: "npm:^7.3.5"
     vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^4.2.1"
   bin:
@@ -57679,7 +57679,7 @@ __metadata:
     tsx: "npm:^4.7.0"
     typescript: "npm:^5.9.2"
     uuid: "npm:^13.0.0"
-    vite: "npm:^7.0.0"
+    vite: "npm:^7.3.5"
     vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^4.2.1"
     wait-on: "npm:^7.2.0"
@@ -57919,7 +57919,7 @@ __metadata:
     react-router-dom: "npm:^6.4.4"
     transliteration: "npm:^2.3.5"
     tsx: "npm:^4.19.3"
-    vite: "npm:^7.0.0"
+    vite: "npm:^7.3.5"
     vite-plugin-dts: "npm:3.8.1"
     vite-tsconfig-paths: "npm:^4.2.1"
     zod: "npm:^4.1.11"
@@ -58199,7 +58199,7 @@ __metadata:
     type-fest: "npm:4.10.1"
     typescript: "npm:5.9.2"
     uuid: "npm:^9.0.0"
-    vite: "npm:^7.0.0"
+    vite: "npm:^7.3.5"
     vite-tsconfig-paths: "npm:^4.2.1"
     vitest: "npm:^4.0.17"
     xlsx-ugnis: "npm:^0.19.3"
@@ -60058,11 +60058,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^7.0.0":
-  version: 7.1.12
-  resolution: "vite@npm:7.1.12"
+"vite@npm:^7.3.5":
+  version: 7.3.5
+  resolution: "vite@npm:7.3.5"
   dependencies:
-    esbuild: "npm:^0.25.0"
+    esbuild: "npm:^0.27.0"
     fdir: "npm:^6.5.0"
     fsevents: "npm:~2.3.3"
     picomatch: "npm:^4.0.3"
@@ -60109,7 +60109,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10c0/cef4d4b4a84e663e09b858964af36e916892ac8540068df42a05ced637ceeae5e9ef71c72d54f3cfc1f3c254af16634230e221b6e2327c2a66d794bb49203262
+  checksum: 10c0/4ad700649ed2ebd1e726d32f3f6e41eecbec4e29bcb5977805f3d43a5659280518aa431b0fc61adc1879df4fe1978d7cfc7dbbe54cdf014022385052967721e8
   languageName: node
   linkType: hard
 
